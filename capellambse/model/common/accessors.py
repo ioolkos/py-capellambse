@@ -35,6 +35,14 @@ class Accessor(t.Generic[T], metaclass=abc.ABCMeta):
         "__objclass__",
     )
 
+    is_derived: t.ClassVar[bool] = False
+    """Whether the accessed attribute is derived.
+
+    See Also
+    --------
+    capellambse.model.common.GenericElement._derived_attributes
+    """
+
     __objclass__: t.Type[t.Any]
     __name__: str
 
@@ -373,6 +381,8 @@ class CustomAccessor(PhysicalAccessor[T]):
         "matchtransform",
     )
 
+    is_derived: t.ClassVar[bool] = True
+
     def __init__(
         self,
         class_: t.Type[T],
@@ -563,6 +573,8 @@ class SpecificationAccessor(Accessor):
 
 class ReferenceSearchingAccessor(PhysicalAccessor):
     __slots__ = ("attrs",)
+
+    is_derived: t.ClassVar[bool] = True
 
     attrs: t.Tuple[str, ...]
 

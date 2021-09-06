@@ -76,6 +76,28 @@ class GenericElement:
 
     _xmltag: t.Optional[str] = None
 
+    @classmethod
+    def _derived_attributes(cls) -> t.FrozenSet[str]:
+        """Find out which attributes are derived.
+
+        A derived attribute meets one of the following two criteria:
+
+        1.  It is not part of the model, and is computed on the fly when
+            it is accessed.
+        2.  It is not stored together with this model object, but with a
+            different one. When this attribute is accessed, the model
+            needs to be searched in order to compute the value.
+        """
+        derived: t.Set[str] = set()
+        for attr in dir(cls):
+            val = getattr(cls, attr, None)
+            if isinstance(val, property):
+                derived.add(attr)
+            elif isinstance(val, accessors.Accessor):
+                if val.is_derived:
+                    derived.add(attr)
+        return frozenset(derived)
+
     @property
     def progress_status(self) -> t.Union[xmltools.AttributeProperty, str]:
         uuid = self._element.get("status")
