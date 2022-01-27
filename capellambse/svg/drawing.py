@@ -45,8 +45,7 @@ LabelDict = t.TypedDict(
 )
 
 
-# FIXME: refactor this, so a Drawing contains an "svg drawing". Always prefer composition over inheritance.
-class Drawing(drawing.Drawing):
+class Drawing:
     """The main container that stores all svg elements."""
 
     def __init__(self, metadata: generate.DiagramMetadata):
@@ -58,7 +57,7 @@ class Drawing(drawing.Drawing):
         if metadata.class_:
             superparams["class_"] = re.sub(r"\s+", "", metadata.class_)
 
-        super().__init__(**superparams)
+        self.drawing = drawing.Drawing(**superparams)
         self.diagram_class = metadata.class_
         self.stylesheet = self.make_stylesheet()
         self.obj_cache: dict[str | None, t.Any] = {}
@@ -71,28 +70,25 @@ class Drawing(drawing.Drawing):
         self, pos: tuple[float, float], size: tuple[float, float]
     ) -> None:
         """Add a white background rectangle to the drawing."""
-        self.__backdrop = self.rect(
+        self.__backdrop = self.drawing.rect(
             insert=pos,
             size=size,
             fill="white",
             stroke="none",
         )
-        self.add(self.__backdrop)
+        self.drawing.add(self.__backdrop)
 
     def make_stylesheet(self) -> style.SVGStylesheet:
         """Return created stylesheet and add sheet and decorations to defs."""
         stylesheet = style.SVGStylesheet(class_=self.diagram_class)
-        self.defs.add(stylesheet.sheet)
+        self.drawing.defs.add(stylesheet.sheet)
         for name in stylesheet.static_deco:
-            self.defs.add(decorations.deco_factories[name]())
+            self.drawing.defs.add(decorations.deco_factories[name]())
 
         for grad in stylesheet.yield_gradients():
-            self.defs.add(grad)
+            self.drawing.defs.add(grad)
 
         return stylesheet
-
-    def __repr__(self) -> str:
-        return super()._repr_svg_()
 
     def add_rect(
         self,
@@ -107,7 +103,7 @@ class Drawing(drawing.Drawing):
         children: bool = False,
     ) -> container.Group:
         """Add a rectangle with auto-aligned text to the group."""
-        grp: container.Group = self.g(class_=f"Box {class_}", id_=id_)
+        grp: container.Group = self.drawing.g(class_=f"Box {class_}", id_=id_)
         text_style = rectstyle.get("text_style")
         rect_style = rectstyle.get("obj_style")
         transform = chelpers.get_transformation(class_, pos, size)
@@ -120,7 +116,7 @@ class Drawing(drawing.Drawing):
         if rect_style:
             rectparams["style"] = rect_style[""]
 
-        rect: shapes.Rect = self.rect(**rectparams)
+        rect: shapes.Rect = self.drawing.rect(**rectparams)
         grp.add(rect)
 
         if features or class_ in decorations.needs_feature_line:
@@ -174,7 +170,7 @@ class Drawing(drawing.Drawing):
         if objstyle is not None:
             css = objstyle["stroke"] if "stroke" in objstyle else None
 
-        line = self.line(
+        line = self.drawing.line(
             start=(x, y + decorations.feature_space),
             end=(x + w, y + decorations.feature_space),
             style=css,
@@ -300,7 +296,7 @@ class Drawing(drawing.Drawing):
         assert isinstance(label["height"], (int, float))
         assert "text" not in label or isinstance(label["text"], str)
 
-        text = self.text(
+        text = self.drawing.text(
             text="",
             insert=(label["x"], label["y"]),
             class_=label["class"],
@@ -382,7 +378,7 @@ class Drawing(drawing.Drawing):
             class_ = "Error"
 
         group.add(
-            self.use(
+            self.drawing.use(
                 href=f"#{class_}Symbol",
                 insert=pos,
                 size=(icon_size, icon_size),
@@ -423,7 +419,7 @@ class Drawing(drawing.Drawing):
         label: LabelDict | None = None,
         id_: str | None = None,
     ) -> container.Group:
-        grp = self.g(class_=f"Box {class_}", id_=id_)
+        grp = self.drawing.g(class_=f"Box {class_}", id_=id_)
         if class_ in decorations.all_directed_ports:
             port_id = "#ErrorSymbol"
             if class_ in decorations.function_ports:
@@ -432,7 +428,7 @@ class Drawing(drawing.Drawing):
                 port_id = "#ComponentPortSymbol"
 
             grp.add(
-                self.use(
+                self.drawing.use(
                     href=port_id,
                     insert=pos,
                     size=size,
@@ -444,7 +440,7 @@ class Drawing(drawing.Drawing):
             )
         else:
             grp.add(
-                self.rect(
+                self.drawing.rect(
                     insert=pos,
                     size=size,
                     class_=class_,
@@ -509,8 +505,8 @@ class Drawing(drawing.Drawing):
 
         drawfunc(**objparams, obj_style=obj_style, text_style=text_style)
 
-        obj_style._deploy_defs(self)
-        text_style._deploy_defs(self)
+        obj_style._deploy_defs(self.drawing)
+        text_style._deploy_defs(self.drawing)
 
     def _draw_symbol(
         self,
@@ -539,9 +535,9 @@ class Drawing(drawing.Drawing):
                 pos, size, text_style, parent_, class_=class_, label=label_
             )
         else:
-            grp = self.g(class_=f"Box {class_}", id_=id_)
+            grp = self.drawing.g(class_=f"Box {class_}", id_=id_)
             grp.add(
-                self.use(
+                self.drawing.use(
                     href=f"#{class_}Symbol",
                     insert=pos,
                     size=size,
@@ -549,7 +545,7 @@ class Drawing(drawing.Drawing):
                 )
             )
 
-        self.add(grp)
+        self.drawing.add(grp)
 
         if label_:
             self._draw_annotation(
@@ -567,7 +563,7 @@ class Drawing(drawing.Drawing):
         label_["class"] = "Annotation"
         self._draw_label(
             label_,
-            grp or self.elements[-1],
+            grp or self.drawing.elements[-1],
             class_=class_,
             labelstyle=text_style,
             text_anchor="middle",
@@ -621,7 +617,7 @@ class Drawing(drawing.Drawing):
             features=features_,
             children=bool(children_),
         )
-        self.add(grp)
+        self.drawing.add(grp)
 
     def _draw_box_symbol(
         self,
@@ -659,9 +655,11 @@ class Drawing(drawing.Drawing):
         del text_style  # No label for circles
         center_ = tuple(i + 0.5 for i in center_)
 
-        grp = self.g(class_=f"Circle {class_}", id_=id_)
-        grp.add(self.circle(center=center_, r=radius_, style=obj_style[""]))
-        self.add(grp)
+        grp = self.drawing.g(class_=f"Circle {class_}", id_=id_)
+        grp.add(
+            self.drawing.circle(center=center_, r=radius_, style=obj_style[""])
+        )
+        self.drawing.add(grp)
 
     def _draw_edge(
         self,
@@ -676,9 +674,11 @@ class Drawing(drawing.Drawing):
     ):
         del kw  # Dismiss additional info from json
         points: list = [(x + 0.5, y + 0.5) for x, y in points_]
-        grp = self.g(class_=f"Edge {class_}", id_=id_)
+        grp = self.drawing.g(class_=f"Edge {class_}", id_=id_)
         grp.add(
-            self.path(d=["M"] + points, class_="Edge", style=obj_style[""])
+            self.drawing.path(
+                d=["M"] + points, class_="Edge", style=obj_style[""]
+            )
         )
 
         # Received text space doesn't allow for anything else than the text
@@ -695,7 +695,7 @@ class Drawing(drawing.Drawing):
                 y_margin=0,
             )
 
-        self.add(grp)
+        self.drawing.add(grp)
 
     def _draw_edge_label(
         self,
@@ -746,7 +746,7 @@ class Drawing(drawing.Drawing):
                     stroke="rgb(239, 41, 41);",
                 )
 
-        bbox = self.rect(
+        bbox = self.drawing.rect(
             insert=(label["x"], label["y"]),
             size=(label["width"], label["height"]),
             class_=class_,
@@ -767,7 +767,7 @@ class Drawing(drawing.Drawing):
         x1, y1 = data["x"], data["y"]
         x2 = data.get("x1") or data["x"] + data["width"]
         y2 = data.get("y1") or data["y"]
-        line = self.line(start=(x1, y1), end=(x2, y2), style=obj_style)
+        line = self.drawing.line(start=(x1, y1), end=(x2, y2), style=obj_style)
         if group is None:
             return line
 
@@ -809,3 +809,6 @@ class Drawing(drawing.Drawing):
             )
         )
         return lines
+
+    def __repr__(self) -> str:
+        return self.drawing._repr_svg_()

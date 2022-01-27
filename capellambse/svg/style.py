@@ -24,14 +24,11 @@ import textwrap
 import typing as t
 
 from lxml import etree
-from svgwrite import base, gradients
+from svgwrite import base, drawing, gradients
 
 from capellambse import aird
 
 from . import decorations, symbols
-
-if t.TYPE_CHECKING:
-    from .drawing import Drawing
 
 logger = logging.getLogger(__name__)
 RE_ELMCLASS = re.compile(r"^([A-Z][a-z_]*)(\.[A-Za-z][A-Za-z0-9_]*)?(:.+)?$")
@@ -219,14 +216,14 @@ class Styling:
     def __str__(self) -> str:
         return self[""] or ""
 
-    def _deploy_defs(self, drawing: Drawing) -> None:
-        defs_ids = {d.attribs.get("id") for d in drawing.defs.elements}
+    def _deploy_defs(self, draw: drawing.Drawing) -> None:
+        defs_ids = {d.attribs.get("id") for d in draw.defs.elements}
         for attr in self:
             val = getattr(self, attr)
             if isinstance(val, cabc.Iterable) and not isinstance(val, str):
                 grad_id = self._generate_id("CustomGradient", val)
                 if grad_id not in defs_ids:
-                    drawing.defs.add(
+                    draw.defs.add(
                         symbols._make_lgradient(id_=grad_id, stop_colors=val)
                     )
                     defs_ids.add(grad_id)
@@ -250,7 +247,7 @@ class Styling:
             stroke_width = str(getstyleattr(self, "stroke-width"))
             marker_id = self._generate_id(marker, [stroke])
             if marker_id not in defs_ids:
-                drawing.defs.add(
+                draw.defs.add(
                     decorations.deco_factories[marker](
                         marker_id,
                         style=Styling(

@@ -142,12 +142,12 @@ class TestSVG:
             pos=(0, 0), size=(1, 1), name=name, class_="TEST"
         )
         svg = SVGDiagram(meta, [])
-        svg.drawing.filename = str(tmp_path / name)
+        svg.drawing.drawing.filename = str(tmp_path / name)
         return svg
 
     def test_diagram_saves(self, tmp_svg: SVGDiagram) -> None:
         tmp_svg.save_drawing()
-        assert pathlib.Path(tmp_svg.drawing.filename).is_file()
+        assert pathlib.Path(tmp_svg.drawing.drawing.filename).is_file()
 
     # FIXME: change this to a parametrized test, do not use if- or for-statements in a unit test
     def test_css_colors(self, tmp_json) -> None:
@@ -407,7 +407,7 @@ class TestSVG:
     ):
         """Test diagrams get rendered successfully"""
         diag = model.diagrams.by_name(diagram_name)
-        svg_string = diag.render("svg")
+        diag.render("svg")
 
     @pytest.mark.parametrize("diagram_type", TEST_DECO)
     @pytest.mark.parametrize(
@@ -463,8 +463,8 @@ class TestSVG:
             }
         )
         diagram = SVGDiagram(meta, contents)
-        assert len(diagram.drawing.elements) == len(contents) + 2
-        for elt in diagram.drawing.elements[2:]:
+        assert len(diagram.drawing.drawing.elements) == len(contents) + 2
+        for elt in diagram.drawing.drawing.elements[2:]:
             assert isinstance(elt, container.Group)
             try:
                 self.check_label_for_containment_and_overlap(*elt.elements)
@@ -523,8 +523,8 @@ class TestSVG:
             }
         )
         diagram = SVGDiagram(meta, contents)
-        assert len(diagram.drawing.elements) == len(contents) + 2
-        for elt in diagram.drawing.elements[2:]:
+        assert len(diagram.drawing.drawing.elements) == len(contents) + 2
+        for elt in diagram.drawing.drawing.elements[2:]:
             assert isinstance(elt, container.Group)
             _, bb, txt, symbol = elt.elements
             try:

@@ -118,10 +118,10 @@ class SVGDiagram:
         self.drawing.draw_object(obj)
 
     def save_drawing(self, pretty: bool = False, indent: int = 2) -> None:
-        self.drawing.save(pretty=pretty, indent=indent)
+        self.drawing.drawing.save(pretty=pretty, indent=indent)
 
     def to_string(self) -> str:
-        return self.drawing.tostring()
+        return self.drawing.drawing.tostring()
 
 
 DiagramMetadataDict = t.TypedDict(
